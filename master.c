@@ -25,10 +25,15 @@
 #include <string.h>
 #include <time.h>
 
+void create_child(int id);
+
+int MAX_CANON; //max total number of children to be created
+int MAX_CHILD; //max total number of children allowed
+int proccounter;
+
 int main(int argc, char **argv) {
     int opts;
-    int MAX_CANON; //max total number of children to be created
-    int MAX_CHILD; //max total number of children allowed
+
     int MAX_TIME; //max total time before sys time out
     key_t key = ftok("./master", 'j'); //key generator for shared memory
 
@@ -66,4 +71,12 @@ int main(int argc, char **argv) {
         }
     }
     return 0;
+}
+
+void creat_child(int id)
+{
+    if((proccounter < MAX_CHILD) && (id < MAX_CANON))
+    {
+        //run palin
+    }
 }
