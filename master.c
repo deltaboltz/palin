@@ -42,21 +42,18 @@ typedef struct
     char chars[1024][1024];
     pid_t ppid;
 }sharedMemory;
-sharedMemory ptr;
+sharedMemory* ptr;
 //---------------------------
-int MAX_CANON; //max total number of children to be created
-int MAX_CHILD; //max total number of children allowed
-int proccounter;
+int MAX_CANON = 10; //max total number of children to be created
+int MAX_CHILD = 5; //max total number of children allowed
+int MAX_TIME = 60; //max total time (seconds) before sys time out
+int procCounter;
 
 int main(int argc, char **argv) {
     int opts;
 
-    int MAX_TIME; //max total time before sys time out
-    key_t key = ftok("./master", 'j'); //key generator for shared memory
 
-    printf("%d\n", key);
 
-    int shmid = shmget(key, 1024, 0600 | IPC_CREAT); //set the shared memory id
 
     while((opts = getopt(argc, argv,"hn:s:t:")) != -1)
     {
@@ -84,17 +81,32 @@ int main(int argc, char **argv) {
                 break;
             default:
                 printf("no arguments given, type master -h for usage/help message");
-                return 1;
+                exit;
         }
     }
+    key_t key = ftok("./master", 'j'); //key generator for shared memory
+
+    printf("%d\n", key);
+
+
+    int shmid = shmget(key, 1024, 0600 | IPC_CREAT); //set the shared memory id
+
+
+    //attach shared memory -------------------
+    ptr = (sharedMemory*) shmat(shmid, NULL, 0);
+    if(ptr == -1)
+    {
+        perror("Shared Memory failed: attachment fault");
+    }
+    //----------------------------------------
     return 0;
 }
 
 void create_child(int id)
 {
-    if((proccounter < MAX_CHILD) && (id < MAX_CANON))
+    if(((procCounter < MAX_CHILD) && (id < MAX_CANON)) || ((MAX_CHILD == 1) && id < MAX_CANON))
     {
-        proccounter++;
+        procCounter++;
         pid_t pid;
         pid = fork();
 
@@ -102,10 +114,10 @@ void create_child(int id)
         {
             if(id == 0)
             {
-                ptr.ppid = getpid();
+                ptr->ppid = getpid();
             }
        }
-        setpgid(0, ptr.ppid);
+        setpgid(0, ptr->ppid);
         char buffer[256];
         sprintf(buffer, "%d", id);
         sleep(2);
