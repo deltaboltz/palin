@@ -6,7 +6,7 @@
  * CS 4760 - 02
  * Date Created: 10/5/2020
  *
- * Files Needed: master.c ; test.txt ; palin.c
+ * Files Needed: master.c ; test.txt ; palin.c ; makefile
  * Files Created: N/A
  *
  * Usage: Using shared memory and congruent processes in C to read in a text file to check if a text is a palindrome or not
@@ -30,6 +30,11 @@ int main(int argc, char **argv) {
     int MAX_CANON; //max total number of children to be created
     int MAX_CHILD; //max total number of children allowed
     int MAX_TIME; //max total time before sys time out
+    key_t key = ftok("./master", 'j'); //key generator for shared memory
+
+    printf("%d\n", key);
+
+    int shmid = shmget(key, 1024, 0600 | IPC_CREAT); //set the shared memory id
 
     while((opts = getopt(argc, argv,"hn:s:t:")) != -1)
     {
@@ -57,7 +62,7 @@ int main(int argc, char **argv) {
                 break;
             default:
                 printf("no arguments given, type master -h for usage/help message");
-                exit(1);
+                return 1;
         }
     }
     return 0;
