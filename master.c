@@ -18,6 +18,8 @@
 #include <sys/wait.h>
 #include <sys/shm.h>
 #include <sys/stat.h>
+#include <sys/ipc.h>
+#include <stdbool.h>
 #include <sys/types.h>
 #include <getopt.h>
 #include <errno.h>
@@ -27,6 +29,18 @@
 
 void create_child(int id);
 
+//Shared memory struct-------------------------
+typedef struct
+{
+    int id;
+    int turn;
+    int children;
+    int flags[64];
+    char chars[1024][1024];
+    pid_t ppid;
+}sharedMemory;
+sharedMemory ptr;
+//---------------------------
 int MAX_CANON; //max total number of children to be created
 int MAX_CHILD; //max total number of children allowed
 int proccounter;
@@ -77,6 +91,18 @@ void creat_child(int id)
 {
     if((proccounter < MAX_CHILD) && (id < MAX_CANON))
     {
-        //run palin
+        proccounter++;
+        pid_t pid;
+        pid = fork();
+
+        if(pid == 0)
+        {
+            if(id == 0)
+            {
+                int ptr;
+                ptr->ppid = getpid();
+            }
+        }
+        setpgid(0, ptr->pgid)
     }
 }
