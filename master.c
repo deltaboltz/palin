@@ -13,6 +13,7 @@
  *
  * Sources: https://www.geeksforgeeks.org/ipc-shared-memory/
  *          https://www.tutorialspoint.com/inter_process_communication/inter_process_communication_shared_memory.htm
+ *          https://www.programiz.com/c-programming/c-file-input-output
  *
  */
 #include <stdio.h>
@@ -38,8 +39,8 @@ typedef struct
     int id;
     int turn;
     int children;
-    int flags[64];
-    char chars[1024][1024];
+    int flags[20];
+    char chars[128][128];
     pid_t ppid;
 }sharedMemory;
 sharedMemory* ptr;
@@ -51,10 +52,7 @@ int procCounter;
 
 int main(int argc, char **argv) {
     int opts;
-
-
-
-
+    int i = 0;
     while((opts = getopt(argc, argv,"hn:s:t:")) != -1)
     {
         switch(opts)
@@ -99,6 +97,23 @@ int main(int argc, char **argv) {
         perror("Shared Memory failed: attachment fault");
     }
     //----------------------------------------
+
+
+
+    //Open and read file only with "r" --------------
+    FILE *fp = fopen(argv[optind], "r");
+    if(fp == NULL)
+    {
+        perror("File: opening fault");
+        exit(1);
+    }
+
+    while(fgets(ptr->chars[i], 128, fp))
+    {
+        ptr->chars[i][strlen(ptr->chars[i]) - 1] = NULL; //get the length of the strings with char sizes
+        i += 1;
+    }
+    //--------------------------------------------------
     return 0;
 }
 

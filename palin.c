@@ -26,6 +26,18 @@
 #include <string.h>
 #include <time.h>
 
+//shared memory struct---------------
+typedef struct
+{
+    int id;
+    int turn;
+    int children;
+    int flags[20];
+    int chars[128][128];
+    pid_t ppid;
+}sharedMemory;
+sharedMemory* ptr;
+//-----------------------------------
 int main(int argc, char** argv)
 {
     //checking palindrome
