@@ -11,6 +11,9 @@
  *
  * Usage: Using shared memory and congruent processes in C to read in a text file to check if a text is a palindrome or not
  *
+ * Sources: https://www.geeksforgeeks.org/ipc-shared-memory/
+ *          https://www.tutorialspoint.com/inter_process_communication/inter_process_communication_shared_memory.htm
+ *
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -87,7 +90,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void creat_child(int id)
+void create_child(int id)
 {
     if((proccounter < MAX_CHILD) && (id < MAX_CANON))
     {
@@ -99,10 +102,14 @@ void creat_child(int id)
         {
             if(id == 0)
             {
-                int ptr;
-                ptr->ppid = getpid();
+                ptr.ppid = getpid();
             }
-        }
-        setpgid(0, ptr->pgid)
+       }
+        setpgid(0, ptr.ppid);
+        char buffer[256];
+        sprintf(buffer, "%d", id);
+        sleep(2);
+        execl("./palin", "palin", buffer, (char*) NULL);
+        exit(1);
     }
 }
