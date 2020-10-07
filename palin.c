@@ -37,7 +37,7 @@ typedef struct
     int turn;
     int children;
     int flags[20];
-    int chars[80][80];
+    char chars[80][80];
     pid_t ppid;
 }sharedMemory;
 sharedMemory* ptr;
@@ -46,6 +46,8 @@ sharedMemory* ptr;
 void handler(int signal, int shmid); //ctrl-c handler for the user to abort the program
 int palinCheck(char chars[]);
 void freeshm();
+void waitingRoom();
+void criticalSection();
 
 int main(int argc, char** argv)
 {
@@ -60,14 +62,30 @@ int main(int argc, char** argv)
     }
     signal(SIGINT, handler);
 
-    palinCheck(ptr->chars[id]);
+    int id = atoi(argv[1]);
+    if(palinCheck(ptr->chars[id]) == 1)
+    {
+        printf("done checking");
+    }
 
     return 0;
 }
 
 int palinCheck(char chars[])
 {
+    printf("We're in palinCheck now");
+    return 1;
+}
 
+void waitingRoom()
+{
+    printf("Waiting room");
+    criticalSection();
+}
+
+void criticalSection()
+{
+    printf("Critical Section");
 }
 
 void handler(int signal, int shmid)
