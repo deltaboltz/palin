@@ -43,27 +43,47 @@ typedef struct
 sharedMemory* ptr;
 //-----------------------------------
 
-void handler(int signal); //ctrl-c handler for the user to abort the program
+void handler(int signal, int shmid); //ctrl-c handler for the user to abort the program
 int palinCheck(char chars[]);
 void freeshm();
-void handler(int signal);
 
 int main(int argc, char** argv)
 {
 
     printf("We're now in palin.c");
+    key_t key = ftok("./master", 'j'); //key generator for shared memory
+    int shmid = shmget(key, 1024, 0600 | IPC_CREAT);
+    ptr = (sharedMemory*) shmat(shmid, NULL, 0);
+    if((int) ptr == -1)
+    {
+        perror("Shared Memory failed: attachment fault");
+    }
     signal(SIGINT, handler);
+
+    palinCheck(ptr->chars[id]);
 
     return 0;
 }
 
-void handler(int signal)
+int palinCheck(char chars[])
 {
-    exit(1);
-    freeshm();
+
 }
 
-void freeshm()
+void handler(int signal, int shmid)
 {
+    exit(1);
+    freeshm(shmid);
+}
 
+void freeshm(int shmid)
+{
+    if(shmdt(ptr) == -1)
+    {
+        perror("Memory error: detaching fault");
+    }
+    if(shmctl(shmid, IPC_RMID, NULL) == -1)
+    {
+        perror("Memory error: delete fault");
+    }
 }
