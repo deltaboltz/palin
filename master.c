@@ -12,8 +12,10 @@
  * Usage: Using shared memory and congruent processes in C to read in a text file to check if a text is a palindrome or not
  *
  * Sources: https://www.geeksforgeeks.org/ipc-shared-memory/
+ *          https://stackoverflow.com/questions/5656530/how-to-use-shared-memory-with-linux-in-c#:~:text=Steps%20%3A%201%20Use%20ftok%20to%20convert%20a,the%20memory%20area.%205%20Detach%20using%20shmdt.%20
  *          https://www.tutorialspoint.com/inter_process_communication/inter_process_communication_shared_memory.htm
  *          https://www.programiz.com/c-programming/c-file-input-output
+ *          https://stackoverflow.com/questions/4217037/catch-ctrl-c-in-c
  *
  */
 #include <stdio.h>
@@ -32,6 +34,8 @@
 #include <time.h>
 
 void create_child(int id);
+void handler(int signal); //ctrl-c handler for the user to abort the program
+void freeshm();
 
 //Shared memory struct-------------------------
 typedef struct
@@ -40,7 +44,7 @@ typedef struct
     int turn;
     int children;
     int flags[20];
-    char chars[128][128];
+    char chars[80][80];
     pid_t ppid;
 }sharedMemory;
 sharedMemory* ptr;
@@ -48,11 +52,15 @@ sharedMemory* ptr;
 int MAX_CANON = 10; //max total number of children to be created
 int MAX_CHILD = 5; //max total number of children allowed
 int MAX_TIME = 60; //max total time (seconds) before sys time out
-int procCounter;
+int procCounter = 0;
 
 int main(int argc, char **argv) {
+
+
     int opts;
     int i = 0;
+
+    signal(SIGINT, handler); //catches ctrl-c and needs free the shared memory
     while((opts = getopt(argc, argv,"hn:s:t:")) != -1)
     {
         switch(opts)
@@ -139,4 +147,20 @@ void create_child(int id)
         execl("./palin", "palin", buffer, (char*) NULL);
         exit(1);
     }
+}
+
+void handler(int signal)
+{
+    killpg(ptr->ppid, SIGTERM); //kill the child process
+    //will need to wait for the child process to end to not leave an orphan
+
+    do {}while(wait(NULL) > 0);
+
+    //freeshm
+}
+
+void freeshm()
+{
+    //detach
+    //delete
 }
