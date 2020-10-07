@@ -7,9 +7,12 @@
  * Date Created: 10/5/2020
  *
  * Files Needed: master.c ; test.txt ; palin.c ; makefile
- * Files Created: N/A
+ * Files Created: output.log
  *
  * Usage: Using shared memory and congruent processes in C to read in a text file to check if a text is a palindrome or not
+ *
+ * Sources: https://iq.opengenus.org/boolean-in-c/
+ *          https://stackoverflow.com/questions/42258485/detaching-from-shared-memory-before-removing-it
  *
  */
 
@@ -26,6 +29,7 @@
 #include <string.h>
 #include <time.h>
 
+
 //shared memory struct---------------
 typedef struct
 {
@@ -33,25 +37,33 @@ typedef struct
     int turn;
     int children;
     int flags[20];
-    int chars[128][128];
+    int chars[80][80];
     pid_t ppid;
 }sharedMemory;
 sharedMemory* ptr;
 //-----------------------------------
+
+void handler(int signal); //ctrl-c handler for the user to abort the program
+int palinCheck(char chars[]);
+void freeshm();
+void handler(int signal);
+
 int main(int argc, char** argv)
 {
-    //checking palindrome
-    int i = 0;
-    char str[];
-    int j = strlen(str) - 1;
-    while(j > i)
-    {
-        if(str[i++] != str(j--))
-        {
-            printf("%s is not a palindrome");
-            break;
-        }
-    }
-    printf("%s is a palindrome");
+
+    printf("We're now in palin.c");
+    signal(SIGINT, handler);
+
     return 0;
+}
+
+void handler(int signal)
+{
+    exit(1);
+    freeshm();
+}
+
+void freeshm()
+{
+
 }

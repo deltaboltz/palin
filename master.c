@@ -17,6 +17,7 @@
  *          https://www.programiz.com/c-programming/c-file-input-output
  *          https://stackoverflow.com/questions/4217037/catch-ctrl-c-in-c
  *          https://codeforwin.org/2016/02/c-program-to-find-maximum-and-minimum-using-functions.html#:~:text=%20C%20program%20to%20find%20maximum%20and%20minimum,numbers%3A%2010%2020%20%20Maximum%20%3D...%20More%20
+ *          https://stackoverflow.com/questions/42258485/detaching-from-shared-memory-before-removing-it
  *
  */
 #include <stdio.h>
@@ -52,7 +53,7 @@ typedef struct
 sharedMemory* ptr;
 //---------------------------
 int MAX_CANON = 10; //max total number of children to be created
-int MAX_CHILD = 5; //max total number of children allowed
+int MAX_CHILD = 2; //max total number of children allowed
 int MAX_TIME = 60; //max total time (seconds) before sys time out
 int procCounter = 0;
 
