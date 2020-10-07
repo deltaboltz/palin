@@ -36,7 +36,7 @@
 #include <time.h>
 
 void create_child(int id);
-void handler(int signal); //ctrl-c handler for the user to abort the program
+void handler(int signal, int shmid); //ctrl-c handler for the user to abort the program
 
 void freeshm();
 
@@ -52,7 +52,7 @@ typedef struct
 }sharedMemory;
 sharedMemory* ptr;
 //---------------------------
-int shmid;
+//int shmid;
 int MAX_CANON = 10; //max total number of children to be created
 int MAX_CHILD = 2; //max total number of children allowed
 int MAX_TIME = 60; //max total time (seconds) before sys time out
@@ -64,7 +64,7 @@ int main(int argc, char **argv) {
     int opts;
     int i = 0;
 
-    signal(SIGINT, handler); //catches ctrl-c and needs free the shared memory
+
     while((opts = getopt(argc, argv,"hn:s:t:")) != -1)
     {
         switch(opts)
@@ -117,7 +117,8 @@ int main(int argc, char **argv) {
     printf("%d\n", key);
 
 
-    shmid = shmget(key, 1024, 0600 | IPC_CREAT); //set the shared memory id
+    int shmid = shmget(key, 1024, 0600 | IPC_CREAT); //set the shared memory id
+    signal(SIGINT, handler); //catches ctrl-c and needs free the shared memory
 
 
     //attach shared memory -------------------
@@ -171,7 +172,7 @@ void create_child(int id)
     }
 }
 
-void handler(int signal)
+void handler(int signal, int shmid)
 {
     killpg(ptr->ppid, SIGTERM); //kill the child process
     //will need to wait for the child process to end to not leave an orphan
@@ -180,10 +181,10 @@ void handler(int signal)
     //empty while loop didn't work last time in project 1, trying an empty do-while
     do{}while(wait(NULL) > 0);
 
-    freeshm();
+    freeshm(shmid);
 }
 
-void freeshm()
+void freeshm(int shmid)
 {
     if(shmdt(ptr) == -1)
     {
