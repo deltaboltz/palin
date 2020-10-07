@@ -16,6 +16,7 @@
  *          https://www.tutorialspoint.com/inter_process_communication/inter_process_communication_shared_memory.htm
  *          https://www.programiz.com/c-programming/c-file-input-output
  *          https://stackoverflow.com/questions/4217037/catch-ctrl-c-in-c
+ *          https://codeforwin.org/2016/02/c-program-to-find-maximum-and-minimum-using-functions.html#:~:text=%20C%20program%20to%20find%20maximum%20and%20minimum,numbers%3A%2010%2020%20%20Maximum%20%3D...%20More%20
  *
  */
 #include <stdio.h>
@@ -35,6 +36,7 @@
 
 void create_child(int id);
 void handler(int signal); //ctrl-c handler for the user to abort the program
+
 void freeshm();
 
 //Shared memory struct-------------------------
@@ -69,8 +71,8 @@ int main(int argc, char **argv) {
                     printf("Usage: master -h -n x -s x -t x");
                     printf("Where:");
                     printf("-h: prints help/usage message");
-                    printf("-n x: x being the max total number of children to be created");
-                    printf("-s x: x being the max total number of children allowed at one time ");
+                    printf("-n x: x being the max total number of children to be created (must be >0)");
+                    printf("-s x: x being the max total number of children allowed at one time (must be >0)");
                     printf("-t x: x being the max total time allowed before system time out");
             case 'n':
                 MAX_CANON = atoi(optarg);
@@ -78,16 +80,34 @@ int main(int argc, char **argv) {
                 {
                     MAX_CANON = 20;
                 }
+                if(MAX_CANON < 0)
+                {
+                    printf("invalid argument, type 'master -h' for usage/help message");
+                    exit(1);
+                }
                 break;
             case 's':
                 MAX_CHILD = atoi(optarg);
+                if(MAX_CHILD < 0)
+                {
+                    printf("invalid argument, type 'master -h' for usage/help message");
+                    exit(1);
+                }
                 break;
             case 't':
                 MAX_TIME = atoi(optarg);
+                if(MAX_TIME < 0)
+                {
+                    printf("Invalid argument, type 'master -h' for usage/help message");
+                }
+                if(MAX_TIME > 20)
+                {
+                    MAX_TIME = 20;
+                }
                 break;
             default:
                 printf("no arguments given, type master -h for usage/help message");
-                exit;
+                exit(1);
         }
     }
     key_t key = ftok("./master", 'j'); //key generator for shared memory
@@ -100,7 +120,7 @@ int main(int argc, char **argv) {
 
     //attach shared memory -------------------
     ptr = (sharedMemory*) shmat(shmid, NULL, 0);
-    if(ptr == -1)
+    if((int) ptr == -1)
     {
         perror("Shared Memory failed: attachment fault");
     }
@@ -154,9 +174,11 @@ void handler(int signal)
     killpg(ptr->ppid, SIGTERM); //kill the child process
     //will need to wait for the child process to end to not leave an orphan
 
-    do {}while(wait(NULL) > 0);
 
-    //freeshm
+    //empty while loop didn't work last time in project 1, trying an empty do-while
+    do{}while(wait(NULL) > 0);
+
+    freeshm();
 }
 
 void freeshm()
