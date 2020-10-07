@@ -52,6 +52,7 @@ typedef struct
 }sharedMemory;
 sharedMemory* ptr;
 //---------------------------
+int shmid;
 int MAX_CANON = 10; //max total number of children to be created
 int MAX_CHILD = 2; //max total number of children allowed
 int MAX_TIME = 60; //max total time (seconds) before sys time out
@@ -116,7 +117,7 @@ int main(int argc, char **argv) {
     printf("%d\n", key);
 
 
-    int shmid = shmget(key, 1024, 0600 | IPC_CREAT); //set the shared memory id
+    shmid = shmget(key, 1024, 0600 | IPC_CREAT); //set the shared memory id
 
 
     //attach shared memory -------------------
@@ -184,6 +185,12 @@ void handler(int signal)
 
 void freeshm()
 {
-    //detach
-    //delete
+    if(shmdt(ptr) == -1)
+    {
+        perror("Memory error: detaching fault");
+    }
+    if(shmctl(shmid, IPC_RMID, NULL) == -1)
+    {
+        perror("Memory error: delete fault");
+    }
 }
