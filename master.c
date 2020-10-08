@@ -35,6 +35,8 @@
 #include <string.h>
 #include <time.h>
 
+#define PERMS (S_IRUSR | S_IWUSR)
+
 void create_child(int id);
 void handler(int signal); //ctrl-c handler for the user to abort the program
 
@@ -43,11 +45,11 @@ void freeshm();
 //Shared memory struct-------------------------
 typedef struct
 {
-    int id;
-    int turn;
-    int children;
-    int flags[20];
-    char chars[80][80];
+    unsigned int id;
+    unsigned int turn;
+    unsigned int children;
+    unsigned int flags[20];
+    char chars[64][64];
     pid_t ppid;
 }sharedMemory;
 sharedMemory* ptr;
@@ -55,21 +57,24 @@ sharedMemory* ptr;
 int MAX_CANON = 10; //max total number of children to be created
 int MAX_CHILD = 2; //max total number of children allowed
 int MAX_TIME = 60; //max total time (seconds) before sys time out
-int procCounter = 0;
-int procIndex;
+unsigned int procCounter = 0;
+unsigned int procIndex;
 
 int shmid;
 
 int main(int argc, char **argv) {
 
+    signal(SIGINT, handler); //catches ctrl-c and needs free the shared memory
 
     int opts;
     int i = 0;
 
+
+    printf("making files\n");
+
+
+    printf("key\n");
     key_t key = ftok("./master", 'j'); //key generator for shared memory
-
-    printf("%d\n", key);
-
 
     while((opts = getopt(argc, argv,"hn:s:t:")) != -1)
     {
@@ -122,13 +127,26 @@ int main(int argc, char **argv) {
 
 
 
-    shmid = shmget(key, 1024, 0600 | IPC_CREAT); //set the shared memory id
-    signal(SIGINT, handler); //catches ctrl-c and needs free the shared memory
 
+    printf("%d\n", key);
+
+    shmid = shmget(key, sizeof(sharedMemory), 0400 | 0200 | IPC_CREAT | IPC_EXCL); //set the shared memory id
+    printf("shmget\n");
+
+    if(shmid == -1)
+    {
+        perror("Failed to get shmid");
+        return 1;
+    }
+
+
+    printf("created key\n");
 
     //attach shared memory -------------------
     ptr = (sharedMemory*) shmat(shmid, NULL, 0);
-    if((int*)ptr == (int*)-1)
+    printf("HELLOLOOOOOOO\n\n\n\n\n");
+
+    if(ptr == (void*)-1)
     {
         perror("Shared Memory failed: attachment fault\n");
     }
@@ -137,6 +155,7 @@ int main(int argc, char **argv) {
 
 
     //Open and read file only with "r" --------------
+    printf("opening file\n" );
     FILE *fp = fopen("text.txt", "r");
     if(fp == NULL)
     {
@@ -146,6 +165,7 @@ int main(int argc, char **argv) {
 
     while(fgets(ptr->chars[i], 128, fp))
     {
+        printf("getting all chars");
         ptr->chars[i][strlen(ptr->chars[i]) - 1] = '\0'; //get the length of the strings with char sizes
         i += 1;
     }
@@ -155,8 +175,10 @@ int main(int argc, char **argv) {
 
     procIndex = 0;
 
+    printf("getting procIndex\n");
     while((procIndex < MAX_CHILD) || (procCounter > 0))
     {
+        printf("go");
         if(procCounter > 0)
         {
             wait(NULL);
@@ -174,6 +196,7 @@ int main(int argc, char **argv) {
 
 void create_child(int index)
 {
+    printf("creating a child\n");
     if(((procCounter < MAX_CHILD) && (index < MAX_CANON)) || ((MAX_CHILD == 1) && index < MAX_CANON))
     {
         procCounter++;
@@ -188,6 +211,7 @@ void create_child(int index)
         char buffer[256];
         sprintf(buffer, "%d", index);
         sleep(2);
+        printf("starting ./palin");
         execl("./palin", "palin", buffer, (char*) NULL);
         exit(1);
     }

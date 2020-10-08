@@ -1,17 +1,20 @@
 CC = gcc
-CFLAGS = -Wall -g
+CFLAGS = -g
 
 TARGETS = master palin
 
 all: $(TARGETS)
 
-master: master.c
-	$(CC) $(CFLAGS) -o master master.c
+master: master.o
+	$(CC) -o $@ master.o $(LIBS)
 
-palin: palin.c
-	$(CC) $(CFLAGS) -o palin palin.c
+palin: palin.o
+	$(CC) -o $@ palin.o $(LIBS)
 
 .PHONY: clean
 
+.c .o:
+	$(CC) -c $(CFLAGS) $<
+
 clean:
-	rm $(TARGETS) *.o
+	rm -f core *.o $(TARGETS) *.out out.log

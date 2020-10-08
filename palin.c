@@ -33,21 +33,23 @@
 //shared memory struct---------------
 typedef struct
 {
-    int id;
-    int turn;
-    int children;
-    int flags[20];
-    char chars[80][80];
+    unsigned int id;
+    unsigned int turn;
+    unsigned int children;
+    unsigned int flags[20];
+    char chars[64][64];
     pid_t ppid;
 }sharedMemory;
 sharedMemory* ptr;
+enum status {idling, want_in, incrit};
 //-----------------------------------
 
 void handler(int signal); //ctrl-c handler for the user to abort the program
 int palinCheck(char chars[]); //check if the characters are a palindrome
 void freeshm(); //free memory function
-void waitingRoom(); //waiting room for the critical section
-void criticalSection(); //critical section
+void waitingRoom( unsigned int id, unsigned int palinFile); //waiting room for the critical section
+void sleepTime(unsigned int id, unsigned int palinFile, unsigned int children);
+void criticalSection(unsigned int id, unsigned int palinFile, unsigned int children); //critical section
 
 int shmid; //had to make shmid a global in order to use signal checking
 
@@ -55,7 +57,7 @@ int main(int argc, char** argv)
 {
 
     printf("We're now in palin.c");
-    key_t key = ftok("./master", 'j'); //key generator for shared memory
+    key_t key = ftok("./master", 'a'); //key generator for shared memory
     shmid = shmget(key, 1024, 0600 | IPC_CREAT);
     ptr = (sharedMemory*) shmat(shmid, NULL, 0);
     if((int*) ptr == (int*)-1)
@@ -65,35 +67,113 @@ int main(int argc, char** argv)
     signal(SIGINT, handler);
 
     int id = atoi(argv[1]);
-    if(palinCheck(ptr->chars[id]) == 1)
+
+    int palinFile = palinCheck(ptr->chars[id]);
+    if(palinFile)
     {
         printf("done checking");
     }
+
+    waitingRoom(id, palinFile);
 
     return 0;
 }
 
 int palinCheck(char chars[])
 {
-    printf("We're in palinCheck now");
+    int i = 0;
+    int j = strlen(chars)-1;
+    while (i < j)
+    {
+        if(chars[i++] != chars[j--])
+        {
+            return 0;
+        }
+    }
     return 1;
 }
 
-void waitingRoom()
+void waitingRoom(unsigned int id, unsigned int palinFile)
 {
-    printf("Waiting room");
-    criticalSection();
+    int i , j;
+    int children = ptr->children; //pointer to the child process wanting into the critsection
+    int turnPointer = ptr->turn;
+     //status of child process
+
+    //set the next child into the want_in status
+    do{
+        ptr->flags[id] = want_in;
+        i = turnPointer;
+        while(i != id)
+        {
+            i = (ptr->flags[i] != idling) ? turnPointer : (i + 1) % children;
+        }
+
+        ptr->flags[id] = incrit;
+        j = 0;
+
+        //Check to see if a child is in the critical section already
+        while(j < children)
+        {
+            if((j != id) && (ptr-> flags[j] == incrit))
+            {
+                printf("occupied...");
+                break;
+            }
+            j += 1;
+        }
+        //----------------------------------------------------------
+    }while((i < children) || ((turnPointer != id) && (ptr -> flags[turnPointer] != idling)));
+    turnPointer = id;
+
+
+    //Call the sleep timer
+    sleepTime(id, palinFile, children);
 }
 
-void criticalSection()
+void sleepTime(unsigned int id, unsigned int palinFile, unsigned int children)
 {
-    printf("Critical Section");
+    //set up random sleep time
+    time_t sleepTime;
+    srand((int)time(&sleepTime));
+    sleep(rand() % 3);
+
+    //Call the critical section
+    criticalSection(id, palinFile, children);
+}
+
+void criticalSection(unsigned int id, unsigned int palinFile, unsigned int children)
+{
+    FILE *fp = fopen(palinFile ? "palin.out" : "nopalin.out" , "+a");
+
+    if(fp == NULL)
+    {
+        perror("Opening file error: palinFile fault");
+    }
+    fclose(fp);
+
+    FILE *fpp = fopen("out.log", "a+");
+    if(fpp == NULL)
+    {
+        perror("Opening file error: out.log fault");
+    }
+
+    fclose(fpp);
+
+    int turnPointer = ptr->turn;
+
+    turnPointer = (turnPointer + 1) % children;
+
+    while(ptr->flags[turnPointer] == idling)
+    {
+        turnPointer = (turnPointer + 1) % children;
+    }
+    ptr->flags[id] = idling;
 }
 
 void handler(int signal)
 {
     exit(1);
-    freeshm(shmid);
 }
 
 void freeshm()
