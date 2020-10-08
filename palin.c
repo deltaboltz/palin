@@ -28,6 +28,7 @@
 #include <signal.h>
 #include <string.h>
 #include <time.h>
+#include <stdbool.h>
 
 
 //shared memory struct---------------
@@ -47,19 +48,34 @@ enum status {idling, want_in, incrit};
 void handler(int signal); //ctrl-c handler for the user to abort the program
 int palinCheck(char chars[]); //check if the characters are a palindrome
 void freeshm(); //free memory function
-void waitingRoom( unsigned int id, unsigned int palinFile); //waiting room for the critical section
-void sleepTime(unsigned int id, unsigned int palinFile, unsigned int children);
-void criticalSection(unsigned int id, unsigned int palinFile, unsigned int children); //critical section
+void waitingRoom( unsigned int id, bool palinFile); //waiting room for the critical section
+void sleepTime(unsigned int id, bool palinFile, unsigned int children);
+void criticalSection(unsigned int id, bool palinFile, unsigned int children); //critical section
 
 int shmid; //had to make shmid a global in order to use signal checking
 
 int main(int argc, char** argv)
 {
 
-    printf("We're now in palin.c");
-    key_t key = ftok("./master", 'a'); //key generator for shared memory
-    shmid = shmget(key, 1024, 0600 | IPC_CREAT);
+    printf("We're now in palin.c\n");
+    int key = ftok(".", 'a'); //key generator for shared memory
+    shmid = shmget(key, sizeof(sharedMemory), 0600 | IPC_CREAT);
+
+    if(shmid == -1)
+    {
+        perror("SHMID");
+        freeshm();
+    }
     ptr = (sharedMemory*) shmat(shmid, NULL, 0);
+
+    if(ptr == (void*)-1)
+    {
+
+        perror("Shared Memory failed\n");
+        freeshm();
+        return 1;
+    }
+
     if((int*) ptr == (int*)-1)
     {
         perror("Shared Memory failed: attachment fault");
@@ -68,7 +84,7 @@ int main(int argc, char** argv)
 
     int id = atoi(argv[1]);
 
-    int palinFile = palinCheck(ptr->chars[id]);
+    bool palinFile = palinCheck(ptr->chars[id]);
     if(palinFile)
     {
         printf("done checking");
@@ -87,13 +103,13 @@ int palinCheck(char chars[])
     {
         if(chars[i++] != chars[j--])
         {
-            return 0;
+            return false;
         }
     }
-    return 1;
+    return true;
 }
 
-void waitingRoom(unsigned int id, unsigned int palinFile)
+void waitingRoom(unsigned int id, bool palinFile)
 {
     int i , j;
     int children = ptr->children; //pointer to the child process wanting into the critsection
@@ -131,7 +147,7 @@ void waitingRoom(unsigned int id, unsigned int palinFile)
     sleepTime(id, palinFile, children);
 }
 
-void sleepTime(unsigned int id, unsigned int palinFile, unsigned int children)
+void sleepTime(unsigned int id, bool palinFile, unsigned int children)
 {
     //set up random sleep time
     time_t sleepTime;
@@ -142,7 +158,7 @@ void sleepTime(unsigned int id, unsigned int palinFile, unsigned int children)
     criticalSection(id, palinFile, children);
 }
 
-void criticalSection(unsigned int id, unsigned int palinFile, unsigned int children)
+void criticalSection(unsigned int id, bool palinFile, unsigned int children)
 {
     FILE *fp = fopen(palinFile ? "palin.out" : "nopalin.out" , "+a");
 

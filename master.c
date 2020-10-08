@@ -37,7 +37,7 @@
 
 #define PERMS (S_IRUSR | S_IWUSR)
 
-void create_child(int id);
+void create_child(int index);
 void handler(int signal); //ctrl-c handler for the user to abort the program
 
 void freeshm();
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
 
 
     printf("key\n");
-    key_t key = ftok("./master", 'j'); //key generator for shared memory
+    int key = ftok(".", 'j'); //key generator for shared memory
 
     while((opts = getopt(argc, argv,"hn:s:t:")) != -1)
     {
@@ -130,12 +130,14 @@ int main(int argc, char **argv) {
 
     printf("%d\n", key);
 
-    shmid = shmget(key, sizeof(sharedMemory), 0400 | 0200 | IPC_CREAT | IPC_EXCL); //set the shared memory id
+    shmid = shmget(key, sizeof(sharedMemory), 0600 | IPC_CREAT | IPC_EXCL); //set the shared memory id
     printf("shmget\n");
 
     if(shmid == -1)
     {
+        freeshm();
         perror("Failed to get shmid");
+
         return 1;
     }
 
@@ -148,7 +150,9 @@ int main(int argc, char **argv) {
 
     if(ptr == (void*)-1)
     {
-        perror("Shared Memory failed: attachment fault\n");
+        freeshm();
+        perror("Shared Memory failed\n");
+        return 1;
     }
     //----------------------------------------
 
@@ -176,20 +180,18 @@ int main(int argc, char **argv) {
     procIndex = 0;
 
     printf("getting procIndex\n");
-    while((procIndex < MAX_CHILD) || (procCounter > 0))
+    while (procIndex < MAX_CANON)
     {
-        printf("go");
-        if(procCounter > 0)
+        create_child(procIndex++);
+    }
+    while(procCounter > 0)
+    {
+        wait(NULL);
+        if(procIndex < i)
         {
-            wait(NULL);
-            create_child(procIndex);
-            procCounter -= 1;
+            create_child(procIndex++);
         }
-        else
-        {
-            procIndex += 1;
-            create_child(procIndex);
-        }
+        procCounter -= 1;
     }
     return 0;
 }
@@ -199,19 +201,40 @@ void create_child(int index)
     printf("creating a child\n");
     if(((procCounter < MAX_CHILD) && (index < MAX_CANON)) || ((MAX_CHILD == 1) && index < MAX_CANON))
     {
+        printf("We're in\n");
         procCounter++;
-        if(fork() == 0)
+        pid_t pid;
+        pid = fork();
+        if(pid == 0)
         {
+            printf("FORKING\n");
             if(index == 0)
             {
+                printf("getting pid");
                 ptr->ppid = getpid();
             }
        }
+        printf("we forked :)\n");
         setpgid(0, ptr->ppid);
+
+        printf("we setpgid\n");
         char buffer[256];
+
+        printf("made buffer\n");
+
+        printf("time to sprintf\n");
         sprintf(buffer, "%d", index);
-        sleep(2);
+
+        printf("done with sprintf\n");
+
+        printf("sleeping the program\n");
+
+        sleep(1);
+
+
         printf("starting ./palin");
+
+
         execl("./palin", "palin", buffer, (char*) NULL);
         exit(1);
     }
