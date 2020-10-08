@@ -43,20 +43,22 @@ typedef struct
 sharedMemory* ptr;
 //-----------------------------------
 
-void handler(int signal, int shmid); //ctrl-c handler for the user to abort the program
-int palinCheck(char chars[]);
-void freeshm();
-void waitingRoom();
-void criticalSection();
+void handler(int signal); //ctrl-c handler for the user to abort the program
+int palinCheck(char chars[]); //check if the characters are a palindrome
+void freeshm(); //free memory function
+void waitingRoom(); //waiting room for the critical section
+void criticalSection(); //critical section
+
+int shmid; //had to make shmid a global in order to use signal checking
 
 int main(int argc, char** argv)
 {
 
     printf("We're now in palin.c");
     key_t key = ftok("./master", 'j'); //key generator for shared memory
-    int shmid = shmget(key, 1024, 0600 | IPC_CREAT);
+    shmid = shmget(key, 1024, 0600 | IPC_CREAT);
     ptr = (sharedMemory*) shmat(shmid, NULL, 0);
-    if((int) ptr == -1)
+    if((int*) ptr == (int*)-1)
     {
         perror("Shared Memory failed: attachment fault");
     }
@@ -88,13 +90,13 @@ void criticalSection()
     printf("Critical Section");
 }
 
-void handler(int signal, int shmid)
+void handler(int signal)
 {
     exit(1);
     freeshm(shmid);
 }
 
-void freeshm(int shmid)
+void freeshm()
 {
     if(shmdt(ptr) == -1)
     {
