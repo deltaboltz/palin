@@ -36,7 +36,7 @@ typedef struct
 {
     unsigned int id;
     unsigned int turn;
-    int children;
+    unsigned int children;
     unsigned int flags[20];
     char chars[64][256];
     pid_t ppid;
@@ -104,10 +104,10 @@ int main(int argc, char** argv)
 
     palin = palinCheck(ptr->chars[id]);
 
-    int childCount = ptr->children;
+    unsigned int childCount = ptr->children;
     //waitingRoom(id);
     printf("We're in the lobby\n");
-    int j;
+    unsigned int j;
     //pointer to the child process wanting into the critsection
     //unsigned int turnPointer = ptr->turn;
     //status of child process
@@ -175,14 +175,14 @@ int main(int argc, char** argv)
     fclose(fpp);
 
 
-
     printf("turn pointer change\n");
-    ptr->turn = (ptr->turn + 1) % childCount;
 
     while(ptr->flags[ptr->turn] == idling)
     {
-        ptr->turn = (ptr->turn + 1) % childCount;
+        printf("Inside flag pointer while loop\n");
+        ptr->turn = (ptr->turn+1) % childCount;
     }
+    printf("finished pointer while loop\n");
     ptr->flags[id] = idling;
 
     return 0;
@@ -298,6 +298,7 @@ void sleepTime()
 
 void handler(int signal)
 {
+    freeshm();
     exit(1);
 }
 
