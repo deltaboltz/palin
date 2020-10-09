@@ -18,6 +18,7 @@
  *          https://stackoverflow.com/questions/4217037/catch-ctrl-c-in-c
  *          https://codeforwin.org/2016/02/c-program-to-find-maximum-and-minimum-using-functions.html#:~:text=%20C%20program%20to%20find%20maximum%20and%20minimum,numbers%3A%2010%2020%20%20Maximum%20%3D...%20More%20
  *          https://stackoverflow.com/questions/42258485/detaching-from-shared-memory-before-removing-it
+ *          https://www.gnu.org/software/libc/manual/html_node/Setting-an-Alarm.html
  *
  */
 #include <stdio.h>
@@ -34,6 +35,7 @@
 #include <signal.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 
 #define PERMS (S_IRUSR | S_IWUSR)
 
@@ -41,6 +43,8 @@ void create_child(int index);
 void handler(int signal); //ctrl-c handler for the user to abort the program
 
 void freeshm();
+void alarmTimer(int secs);
+void timer(int signal);
 
 //Shared memory struct-------------------------
 typedef struct
@@ -74,7 +78,7 @@ int main(int argc, char **argv) {
 
 
     printf("key\n");
-    int key = ftok(".", 'j'); //key generator for shared memory
+    int key = ftok("makefile", 'j'); //key generator for shared memory
 
     while((opts = getopt(argc, argv,"hn:s:t:")) != -1)
     {
@@ -173,10 +177,11 @@ int main(int argc, char **argv) {
         ptr->chars[i][strlen(ptr->chars[i]) - 1] = '\0'; //get the length of the strings with char sizes
         i += 1;
     }
-
     fclose(fp);
     //--------------------------------------------------
 
+
+    alarmTimer(MAX_TIME);
     procIndex = 0;
 
     printf("getting procIndex\n");
@@ -257,14 +262,41 @@ void handler(int signal)
     freeshm(shmid);
 }
 
-void freeshm()
-{
-    if(shmdt(ptr) == -1)
-    {
+void freeshm() {
+    if (shmdt(ptr) == -1) {
         perror("Memory error: detaching fault");
     }
-    if(shmctl(shmid, IPC_RMID, NULL) == -1)
-    {
+    if (shmctl(shmid, IPC_RMID, NULL) == -1) {
         perror("Memory error: delete fault");
     }
 }
+
+    void alarmTimer(int secs) {
+        struct sigaction sa;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_handler = &timer;
+        sa.sa_flags = 0;
+        if (sigaction(SIGALRM, &sa, NULL) < 0) {
+            perror("");
+            exit(1);
+        }
+
+        struct itimerval new;
+        new.it_interval.tv_usec = 0;
+        new.it_interval.tv_sec = 0;
+        new.it_value.tv_usec = 0;
+        new.it_value.tv_sec = (long int) secs;
+        if (setitimer(ITIMER_REAL, &new, NULL) < 0) {
+            perror("ERROR TIMER");
+            exit(1);
+        }
+    }
+
+    void timer(int signal) {
+
+        killpg(ptr->ppid, SIGUSR1);
+        //wait for children to end
+        while (wait(NULL) > 0);
+        freeshm();
+        exit(1);
+    }

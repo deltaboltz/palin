@@ -36,7 +36,7 @@ typedef struct
 {
     unsigned int id;
     unsigned int turn;
-    unsigned int children;
+    int children;
     unsigned int flags[20];
     char chars[64][64];
     pid_t ppid;
@@ -48,9 +48,13 @@ enum status {idling, want_in, incrit};
 void handler(int signal); //ctrl-c handler for the user to abort the program
 int palinCheck(char chars[]); //check if the characters are a palindrome
 void freeshm(); //free memory function
-void waitingRoom( unsigned int id, bool palinFile); //waiting room for the critical section
-void sleepTime(unsigned int id, bool palinFile, unsigned int children);
-void criticalSection(unsigned int id, bool palinFile, unsigned int children); //critical section
+//void waitingRoom( unsigned int id); //waiting room for the critical section
+void sleepTime();
+//void criticalSection(unsigned int id, unsigned int children); //critical section
+
+int id;
+int index1;
+bool palin;
 
 int shmid; //had to make shmid a global in order to use signal checking
 
@@ -58,22 +62,22 @@ int main(int argc, char** argv)
 {
 
     printf("We're now in palin.c\n");
-    int key = ftok(".", 'a'); //key generator for shared memory
-    shmid = shmget(key, sizeof(sharedMemory), 0600 | IPC_CREAT);
+
 
     if(shmid == -1)
     {
         perror("SHMID");
         freeshm();
+        exit(1);
     }
-    ptr = (sharedMemory*) shmat(shmid, NULL, 0);
+
 
     if(ptr == (void*)-1)
     {
 
         perror("Shared Memory failed\n");
         freeshm();
-        return 1;
+        exit(1);
     }
 
     if((int*) ptr == (int*)-1)
@@ -82,17 +86,101 @@ int main(int argc, char** argv)
     }
     signal(SIGINT, handler);
 
-    int id = atoi(argv[1]);
+    id = atoi(argv[1]);
 
-    bool palinFile = palinCheck(ptr->chars[id]);
+    int key = ftok("makefile", 'j'); //key generator for shared memory
+    shmid = shmget(key, sizeof(sharedMemory), 0600 | IPC_CREAT | S_IRUSR | S_IWUSR);
 
-    waitingRoom(id, palinFile);
+    ptr = (sharedMemory*)shmat(shmid, NULL, 0);
+
+    index1 = id - 1;
+
+    palin = palinCheck(ptr->chars[index1]);
+
+    int childCount = ptr->children;
+    //waitingRoom(id);
+    printf("We're in the lobby\n");
+    int j;
+    //pointer to the child process wanting into the critsection
+    //unsigned int turnPointer = ptr->turn;
+    //status of child process
+
+    //set the next child into the want_in status
+
+    printf("About to do the do-while loop");
+    do{
+        printf("inside do-while loop");
+        ptr->flags[id-1] = want_in;
+        j = ptr->turn;
+        while(j != id - 1)
+        {
+            j = (ptr->flags[j] != idling) ? ptr->turn : (j + 1) % childCount;
+        }
+
+        ptr->flags[id] = incrit;
+        j = 0;
+
+        //Check to see if a child is in the critical section already
+        for(j = 0; j < childCount; j++)
+        {
+            if(j != id && ptr->flags[j] == incrit)
+            {
+                break;
+            }
+        }
+        //----------------------------------------------------------
+    }while((j < childCount) || ((ptr->turn != id) && (ptr -> flags[ptr->turn] != idling)));
+
+
+    //Call the sleep timer
+    //printf("Sleeping time...\n");
+    sleepTime(id, childCount);
+
+    ptr->turn = id;
+    //turnPointer = ptr->turn;
+
+    printf("opening file...\n");
+    FILE *fp = fopen(palin ? "palin.out" : "nopalin.out" , "+a");
+
+    printf("fprintf time\n");
+    fprintf(fp, "%s\n", ptr->chars[id]);
+
+    printf("file was written to\n");
+    if(fp == NULL)
+    {
+        perror("Opening file error: palinFile fault");
+    }
+    printf("closing first file\n");
+    fclose(fp);
+
+    printf("opening another file :)\n");
+    FILE *fpp = fopen("out.log", "a+");
+    if(fpp == NULL)
+    {
+        perror("Opening file error: out.log fault");
+    }
+    fprintf(fpp, "%d %d %s %s\n", getpid(), id - 1, ptr->chars[id]);
+
+    printf("closing second file :(\n");
+    fclose(fpp);
+
+
+
+    printf("turn pointer change\n");
+    ptr->turn = (ptr->turn + 1) % childCount;
+
+    while(ptr->flags[ptr->turn] == idling)
+    {
+        ptr->turn = (ptr->turn + 1) % childCount;
+    }
+    ptr->flags[id] = idling;
 
     return 0;
 }
 
 int palinCheck(char chars[])
 {
+    palin = true;
     int i = 0;
     int j = strlen(chars)-1;
     while (i < j)
@@ -105,12 +193,12 @@ int palinCheck(char chars[])
     return true;
 }
 
-void waitingRoom(unsigned int id, bool palinFile)
+/*void waitingRoom(unsigned int id)
 {
     printf("We're in the lobby\n");
-    int i , j;
-    int children = ptr->children; //pointer to the child process wanting into the critsection
-    int turnPointer = ptr->turn;
+    unsigned int i , j;
+    unsigned int children = ptr->children; //pointer to the child process wanting into the critsection
+    unsigned int turnPointer = ptr->turn;
      //status of child process
 
     //set the next child into the want_in status
@@ -140,10 +228,10 @@ void waitingRoom(unsigned int id, bool palinFile)
 
     //Call the sleep timer
     printf("Sleeping time...\n");
-    sleepTime(id, palinFile, children);
-}
+    sleepTime(id, children);
+}*/
 
-void sleepTime(unsigned int id, bool palinFile, unsigned int children)
+void sleepTime()
 {
     //set up random sleep time
     time_t sleepTime;
@@ -155,19 +243,18 @@ void sleepTime(unsigned int id, bool palinFile, unsigned int children)
     //Call the critical section
 
     printf("critsec time\n");
-    criticalSection(id, palinFile, children);
 }
 
-void criticalSection(unsigned int id, bool palinFile, unsigned int children)
+/*void criticalSection(unsigned int id, unsigned int children)
 {
     ptr->turn = id;
     unsigned int turnPointer = ptr->turn;
 
     printf("opening file...\n");
-    FILE *fp = fopen(palinFile ? "palin.out" : "nopalin.out" , "+a");
+    FILE *fp = fopen(palin ? "palin.out" : "nopalin.out" , "+a");
 
     printf("fprintf time\n");
-    fprintf(fp, "$s\n", ptr->chars[id]);
+    fprintf(fp, "%s\n", ptr->chars[id]);
 
     if(fp == NULL)
     {
@@ -182,6 +269,7 @@ void criticalSection(unsigned int id, bool palinFile, unsigned int children)
     {
         perror("Opening file error: out.log fault");
     }
+    fprintf(fpp, "%d %d %s %s\n", getpid(), id - 1, ptr->chars[id]);
 
     printf("closing second file :(\n");
     fclose(fpp);
@@ -196,7 +284,7 @@ void criticalSection(unsigned int id, bool palinFile, unsigned int children)
         turnPointer = (turnPointer + 1) % children;
     }
     ptr->flags[id] = idling;
-}
+}*/
 
 void handler(int signal)
 {
