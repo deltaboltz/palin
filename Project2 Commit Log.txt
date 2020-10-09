@@ -1,0 +1,79 @@
+github log
+
+Oct 5, 2020
+3b64a2e
+	test commit
+
+599cbbe
+	added getopt to main to parse cmdline args
+
+Oct 6, 2020
+da6714f
+	added shared memory and shmget/id
+
+a13c1e3
+	added palindrome check and created child_create function
+
+45ed2b9
+	made shared memory as struct
+
+fd08ef2
+	added more to create_child function
+
+83d4284
+	added makefile
+
+d5953f3
+	added shared memory latching
+
+c4d3af9
+	added shared memory to palin.c, created .txt files, opened file in master.c
+
+Oct 7, 2020
+48a9d82
+	added signal handling and prototype for freeing shm
+
+81bff5e
+	stuck...
+
+b312a8a
+	added functions to palin.c freeshm problems
+
+6d508a9
+	made shmid a global
+
+e405901
+	removed global shmid
+
+0d2151c
+	problems with connecting struct to palinCheck
+
+7ba5e29
+	starting critical section and waiting room
+
+242da5a
+	idk what's going on...
+
+Oct 8, 2020
+b8ec871
+	problems with creating shmid
+
+18061a6
+	error opening files in palin
+
+76949e4
+	idk what im doing atm
+
+afa5054
+	getting a floating point exception error
+
+073de09
+	fixed segfaults and float exception, finally working
+
+1868378
+	works sometimes I guess
+
+caa22aa
+	Update README.md
+
+END OF GIT LOG
