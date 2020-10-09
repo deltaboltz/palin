@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 
 
     printf("key\n");
-    int key = ftok("makefile", 'j'); //key generator for shared memory
+    int key = ftok("master", 'j'); //key generator for shared memory
 
     while((opts = getopt(argc, argv,"hn:s:t:")) != -1)
     {
@@ -164,7 +164,7 @@ int main(int argc, char **argv) {
 
     //Open and read file only with "r" --------------
     printf("opening file\n" );
-    FILE *fp = fopen("text.txt", "r");
+    FILE *fp = fopen(argv[optind], "r");
     if(fp == NULL)
     {
         perror("File: opening fault");
@@ -175,7 +175,7 @@ int main(int argc, char **argv) {
     {
         printf("getting all chars");
         ptr->chars[i][strlen(ptr->chars[i]) - 1] = '\0'; //get the length of the strings with char sizes
-        i += 1;
+        i++;
     }
     fclose(fp);
     //--------------------------------------------------
@@ -198,6 +198,8 @@ int main(int argc, char **argv) {
         }
         procCounter -= 1;
     }
+
+    freeshm();
     return 0;
 }
 

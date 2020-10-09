@@ -38,7 +38,7 @@ typedef struct
     unsigned int turn;
     int children;
     unsigned int flags[20];
-    char chars[64][64];
+    char chars[64][256];
     pid_t ppid;
 }sharedMemory;
 sharedMemory* ptr;
@@ -85,17 +85,24 @@ int main(int argc, char** argv)
         perror("Shared Memory failed: attachment fault");
     }
     signal(SIGINT, handler);
+    //signal(SIGUSR1, timer);
 
     id = atoi(argv[1]);
 
-    int key = ftok("makefile", 'j'); //key generator for shared memory
+    int key = ftok("master", 'a'); //key generator for shared memory
     shmid = shmget(key, sizeof(sharedMemory), 0600 | IPC_CREAT | S_IRUSR | S_IWUSR);
 
     ptr = (sharedMemory*)shmat(shmid, NULL, 0);
 
+    if(ptr == (void*) -1)
+    {
+        perror("Failed to attach");
+        exit(1);
+    }
+
     index1 = id - 1;
 
-    palin = palinCheck(ptr->chars[index1]);
+    palin = palinCheck(ptr->chars[id]);
 
     int childCount = ptr->children;
     //waitingRoom(id);
@@ -110,9 +117,9 @@ int main(int argc, char** argv)
     printf("About to do the do-while loop");
     do{
         printf("inside do-while loop");
-        ptr->flags[id-1] = want_in;
+        ptr->flags[id] = want_in;
         j = ptr->turn;
-        while(j != id - 1)
+        while(j != id)
         {
             j = (ptr->flags[j] != idling) ? ptr->turn : (j + 1) % childCount;
         }
@@ -140,7 +147,7 @@ int main(int argc, char** argv)
     //turnPointer = ptr->turn;
 
     printf("opening file...\n");
-    FILE *fp = fopen(palin ? "palin.out" : "nopalin.out" , "+a");
+    FILE *fp = fopen(palin ? "palin.out" : "nopalin.out" , "a+");
 
     printf("fprintf time\n");
     fprintf(fp, "%s\n", ptr->chars[id]);
@@ -148,18 +155,21 @@ int main(int argc, char** argv)
     printf("file was written to\n");
     if(fp == NULL)
     {
-        perror("Opening file error: palinFile fault");
+        perror("Opening file error: palin fault");
     }
-    printf("closing first file\n");
+    printf("closing first file :(\n");
     fclose(fp);
 
+    pid_t pid = getpid();
     printf("opening another file :)\n");
     FILE *fpp = fopen("out.log", "a+");
+    printf("we opened out.log\n");
     if(fpp == NULL)
     {
         perror("Opening file error: out.log fault");
     }
-    fprintf(fpp, "%d %d %s %s\n", getpid(), id - 1, ptr->chars[id]);
+    printf("fprintf for OUT.LOG\n");
+    fprintf(fpp, "%d %d %s\n", pid, id, ptr->chars[id]);
 
     printf("closing second file :(\n");
     fclose(fpp);
